@@ -1,0 +1,72 @@
+Day 1 (March 19th):
+Installing requirements and everything. First thing to do right now is get everything running to see how the current model looks like.
+Copilot's reccomendation:
+Day 1: get direct baseline scoring on val.
+Day 2: run agentic baseline and compare val score.
+Day 3+: tune retrieval (top_k, query reformulation, citation normalization), then switch to test and submit.
+
+Also copilot's explanation of everything (and mine own):
+What direct generation does
+
+Loads a local GGUF model and loops over each query (01_direct_generation_baseline.ipynb:7, 01_direct_generation_baseline.ipynb:35).
+
+Sends one prompt that asks for relevant Swiss citations directly from the question (prompts.py:14).
+
+Parses model text with citation regex rules (BGE, Art., law abbreviations), deduplicates, and writes predicted_citations (01_direct_generation_baseline.ipynb:287, 01_direct_generation_baseline.ipynb:384).
+
+In this notebook, if no citation is found it can emit a single-space placeholder for that row (01_direct_generation_baseline.ipynb:381).
+
+(What is a GGUF: Package that contains information like weights and metadata about local LLM)
+
+What agentic retrieval does
+
+Builds or loads BM25 indices for two corpora: federal laws and court decisions (02_agentic_retrieval_baseline.ipynb:13, bm25_index.py:11).
+
+(What is BM25: ranks documents that are most relevant to query)
+
+Creates tool interfaces search_laws and search_courts that return formatted hits with excerpts (tools.py:10, tools.py:107).
+
+Runs a ReAct loop per query:
+LLM emits Thought/Action/Action Input
+code parses actions
+tool calls execute searches
+observations are fed back for more steps
+citations are collected and deduplicated
+(02_agentic_retrieval_baseline.ipynb:778, 02_agentic_retrieval_baseline.ipynb:1026, prompts.py:66).
+Writes semicolon-joined citations to submission (02_agentic_retrieval_baseline.ipynb:1287).
+
+How to get direct baseline scoring on val for day 1:
+
+Install and activate env
+
+In PowerShell from repo root, create/activate venv and install requirements.
+Make sure you can import llama_cpp (or the notebook will run in mock mode and the score is not meaningful).
+Confirm validation data exists
+You need val.csv in your data folder with query_id, query, and gold_citations.
+The notebook reads data mode from 01_direct_generation_baseline.ipynb:35.
+
+Put a GGUF model where notebook expects it
+
+Default model path/config is in 01_direct_generation_baseline.ipynb:58.
+If model is missing, it falls back to mock mode as shown in 01_direct_generation_baseline.ipynb:126.
+
+Run direct baseline notebook on val
+
+Open 01_direct_generation_baseline.ipynb.
+Set DATASET_MODE to val.
+Run all cells.
+It writes output to submission.csv (under OUTPUT_PATH) in 01_direct_generation_baseline.ipynb:439.
+
+Validate submission format
+
+Run:
+python validate_submission.py output/submission.csv
+Validator file is validate_submission.py.
+Score on validation split
+Run:
+python evaluate_submission.py output/submission.csv --split val
+Scorer script is evaluate_submission.py.
+
+What success looks like
+Validator says PASSED.
+Evaluation script prints a numeric score.
